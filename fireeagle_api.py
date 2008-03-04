@@ -77,7 +77,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import datetime, httplib, re, string
 from xml.dom import minidom
 
-# TODO: Fix oauth import
 import oauth
 
 # General API setup
