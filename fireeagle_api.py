@@ -194,13 +194,11 @@ FIREEAGLE_METHODS = {
         'returns'     : LOCATION,
         'url_template': API_URL_TEMPLATE,
     },
-    # TODO: recent method
     'recent': {
         'http_headers': None,
         'http_method' : 'GET',
         'optional'    : ['count', 'time'],
         'required'    : ['token'],
-        # TODO: Check recent's return type
         'returns'     : USER,
         'url_template': API_URL_TEMPLATE,
     },
