@@ -218,7 +218,7 @@ FIREEAGLE_METHODS = {
         'http_method' : 'GET',
         'optional'    : [],
         'required'    : ['token'],
-        'returns'     : USER_LOCATION,
+        'returns'     : USER,
         'url_template': API_URL_TEMPLATE,
     },
     # TODO: within method
@@ -309,20 +309,32 @@ class FireEagle:
                 node_key      = key.replace( '_', '-' )
                 data_elements = node.getElementsByTagName( node_key )
                 
-                # If we've got multiple elements, build a list of conversions
-                if data_elements and ( len( data_elements ) > 1 ):
-                    data_item = []
-                    for data_element in data_elements:
-                        data_item.append( conversion(
-                            data_element.firstChild.data
-                        ) )
-                # If we only have one element, assume text node
-                elif data_elements:
-                    data_item = conversion( data_elements[0].firstChild.data )
-                # If no elements are matched, convert the attribute
+                # If conversion is a tuple, call build_return again
+                if isinstance( conversion, tuple ):
+                    child_element, child_conversions = conversion
+                    data[key] = self.build_return( \
+                        node, child_element, child_conversions \
+                    )
                 else:
-                    data_item = conversion( node.getAttribute( node_key ) )
-                data[key] = data_item
+                    # If we've got multiple elements, build a 
+                    # list of conversions
+                    if data_elements and ( len( data_elements ) > 1 ):
+                        data_item = []
+                        for data_element in data_elements:
+                            data_item.append( conversion(
+                                data_element.firstChild.data
+                            ) )
+                    # If we only have one element, assume text node
+                    elif data_elements:
+                        data_item = conversion( \
+                            data_elements[0].firstChild.data
+                        )
+                    # If no elements are matched, convert the attribute
+                    else:
+                        data_item = conversion( \
+                            node.getAttribute( node_key )
+                        )
+                    data[key] = data_item
             
             results.append( data )
         
