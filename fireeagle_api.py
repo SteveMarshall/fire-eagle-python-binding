@@ -152,12 +152,12 @@ USER_LOCATION = 'location', {
     'level_name': string,
     'located_at': date,
     'name'      : string,
-    'place_id'  : string
+    'place_id'  : string,
 }
 
 USER = 'user', {
     'token'   : string,
-    'location': USER_LOCATION
+    'location': USER_LOCATION,
 }
 FIREEAGLE_METHODS = {
     # OAuth methods
@@ -197,7 +197,7 @@ FIREEAGLE_METHODS = {
     'recent': {
         'http_headers': None,
         'http_method' : 'GET',
-        'optional'    : ['count', 'time'],
+        'optional'    : ['per_page', 'page', 'time'],
         'required'    : ['token'],
         'returns'     : USER,
         'url_template': API_URL_TEMPLATE,
@@ -220,15 +220,21 @@ FIREEAGLE_METHODS = {
         'url_template': API_URL_TEMPLATE,
     },
     # TODO: within method
-    # 'within': {
-    # }
+    'within': {
+        'http_headers': None,
+        'http_method' : 'GET',
+        'optional'    : ['place_id', 'woe_id'],
+        'required'    : ['token'],
+        'returns'     : USER,
+        'url_template': API_URL_TEMPLATE,
+    }
 }
 
 
 class FireEagleException( Exception ):
     pass
 
-# Used as a proxy for method of the FireEagle class; when methods are called,
+# Used as a proxy for methods of the FireEagle class; when methods are called,
 # __call__ in FireEagleAccumulator is called, ultimately calling the
 # fireeagle_obj's callMethod()
 class FireEagleAccumulator:
