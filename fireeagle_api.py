@@ -155,6 +155,10 @@ USER_LOCATION = 'location', {
     'place_id'  : string
 }
 
+USER = 'user', {
+    'token'   : string,
+    'location': USER_LOCATION
+}
 FIREEAGLE_METHODS = {
     # OAuth methods
     'access_token': {
@@ -191,15 +195,15 @@ FIREEAGLE_METHODS = {
         'url_template': API_URL_TEMPLATE,
     },
     # TODO: recent method
-    # 'recent': {
-    #     'http_headers': None,
-    #     'http_method' : 'GET',
-    #     'optional'    : ['count', 'time'],
-    #     'required'    : ['token'],
-    #     # TODO: Check recent's return type
-    #     'returns'     : ,
-    #     'url_template': API_URL_TEMPLATE,
-    # },
+    'recent': {
+        'http_headers': None,
+        'http_method' : 'GET',
+        'optional'    : ['count', 'time'],
+        'required'    : ['token'],
+        # TODO: Check recent's return type
+        'returns'     : USER,
+        'url_template': API_URL_TEMPLATE,
+    },
     'update': {
         'http_headers': POST_HEADERS,
         'http_method' : 'POST',
@@ -296,6 +300,34 @@ class FireEagle:
         # Return the body of the response
         return response_body
     
+    def build_return( self, dom_element, target_element_name, conversions):
+        results = []
+        for node in dom_element.getElementsByTagName( target_element_name ):
+            data = {}
+            
+            for key, conversion in conversions.items():
+                node_key      = key.replace( '_', '-' )
+                data_elements = node.getElementsByTagName( node_key )
+                
+                # If we've got multiple elements, build a list of conversions
+                if data_elements and ( len( data_elements ) > 1 ):
+                    data_item = []
+                    for data_element in data_elements:
+                        data_item.append( conversion(
+                            data_element.firstChild.data
+                        ) )
+                # If we only have one element, assume text node
+                elif data_elements:
+                    data_item = conversion( data_elements[0].firstChild.data )
+                # If no elements are matched, convert the attribute
+                else:
+                    data_item = conversion( node.getAttribute( node_key ) )
+                data[key] = data_item
+            
+            results.append( data )
+        
+        return results
+    
     def call_method( self, method, *args, **kw ):
         
         # Theoretically, we might want to do 'does this method exits?' checks
@@ -371,31 +403,7 @@ class FireEagle:
         element, conversions = meta['returns']
         response_dom         = minidom.parseString( response )
         
-        for node in response_dom.getElementsByTagName( element ):
-            data = {}
-            
-            for key, conversion in conversions.items():
-                node_key      = key.replace( '_', '-' )
-                data_elements = node.getElementsByTagName( node_key )
-                
-                # If we've got multiple elements, build a list of conversions
-                if data_elements and ( len( data_elements ) > 1 ):
-                    data_item = []
-                    for data_element in data_elements:
-                        data_item.append( conversion(
-                            data_element.firstChild.data
-                        ) )
-                # If we only have one element, assume text node
-                elif data_elements:
-                    data_item = conversion( data_elements[0].firstChild.data )
-                # If no elements are matched, convert the attribute
-                else:
-                    data_item = conversion( node.getAttribute( node_key ) )
-                data[key] = data_item
-            
-            results.append( data )
-        
-        return results
+        return self.build_return( response_dom, element, conversions )
     
 
 # TODO: Cached version
