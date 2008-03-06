@@ -418,11 +418,12 @@ class FireEagle:
         elif 'oauth_token' == meta['returns']:
             return oauth.OAuthToken.from_string( response )
         
-        results              = []
         element, conversions = meta['returns']
         response_dom         = minidom.parseString( response )
+        results              = self.build_return( \
+            response_dom, element, conversions )
         
-        return self.build_return( response_dom, element, conversions )
+        return results
     
 
 # TODO: Cached version
