@@ -430,7 +430,7 @@ class FireEagle:
         
         element, conversions = meta['returns']
         response_dom         = minidom.parseString( response )
-        print response
+        
         results              = self.build_return( \
             response_dom, element, conversions )
         
