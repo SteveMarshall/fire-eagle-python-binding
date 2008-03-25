@@ -1,7 +1,9 @@
 """
-Fire Eagle API Python module v0.6
+Fire Eagle API Python module v0.6.1
 by Steve Marshall <steve@nascentguruism.com>
                  <http://nascentguruism.com/>
+
+Source repo at <http://github.com/SteveMarshall/fire-eagle-python-binding/>
 
 Example usage:
 
