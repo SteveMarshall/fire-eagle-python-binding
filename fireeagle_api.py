@@ -116,8 +116,13 @@ UNSPECIFIED_ERROR_EXCEPTION = string.Template(
 
 # Attribute conversion functions
 string  = lambda s: s.encode('utf8')
-# TODO: Would this be better served returning an array of floats?
-geo_str = lambda s: s.split(' ')
+boolean = lambda s: 'true' == s.lower()
+
+def geo_str(s):
+    if 0 == len(s):
+        return None
+    # TODO: Would this be better served returning an array of floats?
+    return s.split(' ')
 
 def date(s):
     # 2008-02-08T10:49:03-08:00
@@ -145,14 +150,15 @@ LOCATION = 'location', {
 }
 
 USER_LOCATION = 'location', {
-    'best_guess': bool,
+    'best_guess'   : boolean,
     # HACK: I'm not entirely happy using 'georss:box' as the key here
     'georss:box'   : geo_str,
-    'level'     : int,
-    'level_name': string,
-    'located_at': date,
-    'name'      : string,
-    'place_id'  : string,
+    'georss:point' : geo_str,
+    'level'        : int,
+    'level_name'   : string,
+    'located_at'   : date,
+    'name'         : string,
+    'place_id'     : string,
 }
 
 USER = 'user', {
@@ -219,7 +225,6 @@ FIREEAGLE_METHODS = {
         'returns'     : USER,
         'url_template': API_URL_TEMPLATE,
     },
-    # TODO: within method
     'within': {
         'http_headers': None,
         'http_method' : 'GET',
@@ -314,6 +319,7 @@ class FireEagle:
             
             for key, conversion in conversions.items():
                 node_key      = key.replace( '_', '-' )
+                key           = key.replace( ':', '_' )
                 data_elements = node.getElementsByTagName( node_key )
                 
                 # If conversion is a tuple, call build_return again
@@ -339,9 +345,11 @@ class FireEagle:
                     # If no elements are matched, convert the attribute
                     else:
                         data_item = conversion( \
-                            node.getAttribute( node_key )
+                            node.getAttribute( node_key ) \
                         )
-                    data[key] = data_item
+                    
+                    if data_item is not None:
+                        data[key] = data_item
             
             results.append( data )
         
@@ -420,6 +428,7 @@ class FireEagle:
         
         element, conversions = meta['returns']
         response_dom         = minidom.parseString( response )
+        print response
         results              = self.build_return( \
             response_dom, element, conversions )
         
