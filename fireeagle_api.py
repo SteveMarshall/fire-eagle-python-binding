@@ -85,7 +85,7 @@ import oauth
 API_PROTOCOL = 'https'
 API_SERVER   = 'fireeagle.yahooapis.com'
 API_VERSION  = '0.1'
-FE_PROTOCOL  = 'http'
+FE_PROTOCOL  = 'https'
 FE_SERVER    = 'fireeagle.com'
 
 # Calling templates
@@ -124,7 +124,7 @@ def geo_str(s):
     if 0 == len(s):
         return None
     # TODO: Would this be better served returning an array of floats?
-    return s.split(' ')
+    return [float(bit) for bit in s.split(' ')]
 
 def date(s):
     # 2008-02-08T10:49:03-08:00
