@@ -1,8 +1,17 @@
 import fireeagle_api
+import os.path
 from pprint import pprint
 
-consumer_key, consumer_secret = fireeagle_api.read_consumer_tokens()
-fe = fireeagle_api.FireEagle( consumer_key, consumer_secret )
+"""
+
+First, paste your consumer key and secret into ~/.fireeaglerc, in the following format:
+
+consumer_key = YNqmPYEMEOzA
+consumer_secret = 7W6t7UwHXhe7UtAVo2KO5VGbK6I1UjOS
+
+"""
+
+fe = fireeagle_api.FireEagle( os.path.expanduser( '~/.fireeaglerc' ) )
 
 print "Getting a request token"
 request_token = fe.request_token()
