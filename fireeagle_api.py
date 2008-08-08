@@ -8,15 +8,16 @@ Source repo at <http://github.com/SteveMarshall/fire-eagle-python-binding/>
 Example usage:
 
 >>> from fireeagle_api import FireEagle
+>>> from pprint import pprint
 >>> fe = FireEagle( YOUR_CONSUMER_KEY, YOUR_CONSUMER_SECRET )
 >>> application_token = fe.request_token()
 >>> auth_url          = fe.authorize( application_token )
 >>> print auth_url
 >>> pause( 'Please authorize the app at that URL!' )
 >>> user_token        = fe.access_token( application_token )
->>> pprint fe.lookup( user_token, q='London, England' )
+>>> pprint( fe.lookup( user_token, q='London, England' ) )
 [{'name': 'London, England', 'place_id': '.2P4je.dBZgMyQ'}]
->>> pprint fe.user( user_token )
+>>> pprint( fe.user( user_token ) )
 [   {   'best_guess': True,
         'georss:box': [   u'51.2613182068',
                           u'-0.5090100169',
@@ -76,7 +77,7 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-import datetime, httplib, re, string
+import datetime, httplib, os.path, re, string
 from xml.dom import minidom
 
 import oauth
@@ -86,14 +87,17 @@ API_PROTOCOL = 'https'
 API_SERVER   = 'fireeagle.yahooapis.com'
 API_VERSION  = '0.1'
 FE_PROTOCOL  = 'https'
-FE_SERVER    = 'fireeagle.com'
+FE_SERVER    = 'fireeagle.yahoo.net'
 
 # Calling templates
 API_URL_TEMPLATE   = string.Template(
-    API_PROTOCOL + '://' + API_SERVER + '/api/' + API_VERSION + '/${method}'
+    '${proto}://${server}/api/' + API_VERSION + '/${method}'
 )
 OAUTH_URL_TEMPLATE = string.Template(
-    API_PROTOCOL + '://' + API_SERVER + '/oauth/${method}'
+    '${proto}://${server}/oauth/${method}'
+)
+AUTHORIZE_URL_TEMPLATE = string.Template(
+    '${proto}://${server}/oauth/${method}?oauth_token=${token}'
 )
 POST_HEADERS = {
     'Content-type': 'application/x-www-form-urlencoded',
@@ -101,7 +105,7 @@ POST_HEADERS = {
 }
 LOCATION_PARAMETERS = [
     'address', 'cid', 'city', 'country', 'geom', 'lac', 'lat',
-    'lon', 'mcc', 'mnc', 'place_id', 'postal', 'q', 'state'
+    'lon', 'mcc', 'mnc', 'place_id', 'postal', 'q', 'state', 'woeid'
 ]
 
 # Error templates
@@ -149,6 +153,7 @@ def date(s):
 LOCATION = 'location', {
     'name'    : string,
     'place_id': string,
+    'woeid'   : string,
 }
 
 USER_LOCATION = 'location', {
@@ -161,6 +166,8 @@ USER_LOCATION = 'location', {
     'located_at'   : date,
     'name'         : string,
     'place_id'     : string,
+    'woeid'        : string,
+    'query'        : string,
 }
 
 USER = 'user', {
@@ -183,7 +190,7 @@ FIREEAGLE_METHODS = {
         'optional'    : [],
         'required'    : ['token'],
         'returns'     : 'request_url',
-        'url_template': OAUTH_URL_TEMPLATE,
+        'url_template': AUTHORIZE_URL_TEMPLATE,
     },
     'request_token': {
         'http_headers': None,
@@ -241,6 +248,26 @@ FIREEAGLE_METHODS = {
 }
 
 
+def read_consumer_tokens():
+    info = {}
+
+    # try reading key and secret from ~/.fireeaglerc
+    fn = os.path.expanduser("~/.fireeaglerc")
+    if os.path.exists(fn):
+        for line in open(fn).readlines():
+            p = line.find("#")
+            if p != -1: line = line[:p]
+            line = line.strip()
+            if not line: continue
+            k, v = line.split("=", 1)
+            info[k.strip()] = v.strip()
+
+    # if we couldn't find them from .fireeaglerc, ask
+    if not info.has_key('consumer_key'): info['consumer_key'] = raw_input("Enter consumer key: ")
+    if not info.has_key('consumer_secret'): info['consumer_secret'] = raw_input("Enter consumer secret: ")
+
+    return (info['consumer_key'], info['consumer_secret'])
+
 class FireEagleException( Exception ):
     pass
 
@@ -269,7 +296,7 @@ class FireEagle:
             self.consumer_secret
         )
         self.signature_method = oauth.OAuthSignatureMethod_HMAC_SHA1()
-        self.http_connection  = httplib.HTTPSConnection( API_SERVER )
+        self.http_connection  = (API_PROTOCOL == 'https' and httplib.HTTPSConnection or httplib.HTTPConnection)( API_SERVER )
         
         # Prepare the accumulators for each method
         for method, _ in FIREEAGLE_METHODS.items():
@@ -387,15 +414,21 @@ class FireEagle:
             del kw['token']
         else:
             token = None
+
+        # If the return type is the request_url, simply build the URL
+        # (without a signature) and return it witout executing
+        # anything.
+        if 'request_url' == meta['returns']:
+            return meta['url_template'].substitute( method=method, proto=FE_PROTOCOL, server=FE_SERVER, token=token.key )
         
         # Build and sign the oauth_request
-        # NOTE: If ( token == None ), it's handled it silently
+        # NOTE: If ( token == None ), it's handled silently
         #       when building/signing
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(
             self.oauth_consumer,
             token       = token,
             http_method = meta['http_method'],
-            http_url    = meta['url_template'].substitute( method=method ),
+            http_url    = meta['url_template'].substitute( method=method, proto=API_PROTOCOL, server=API_SERVER ),
             parameters  = kw
         )
         oauth_request.sign_request(
@@ -403,15 +436,6 @@ class FireEagle:
             self.oauth_consumer,
             token
         )
-        
-        # If the return type is the request_url, simply build the URL and 
-        # return it witout executing anything    
-        if 'request_url' == meta['returns']:
-            # HACK: Don't actually want to point users to yahooapis.com, so 
-            #       point them to fireeagle.com
-            return oauth_request.to_url().replace( \
-                API_PROTOCOL + '://' + API_SERVER, \
-                FE_PROTOCOL  + '://' + FE_SERVER )
         
         if 'POST' == meta['http_method']:
             response = self.fetch_response( oauth_request.http_method, \
