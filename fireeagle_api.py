@@ -460,7 +460,8 @@ class FireEagle:
         
         if 'POST' == meta['http_method']:
             response = self.fetch_response( oauth_request.http_method, \
-                oauth_request.to_url(), oauth_request.to_postdata(), \
+                oauth_request.get_normalized_http_url(), \
+                oauth_request.to_postdata(), \
                 meta['http_headers'] )
         else:
             response = self.fetch_response( oauth_request.http_method, \
