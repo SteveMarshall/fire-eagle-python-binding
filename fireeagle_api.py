@@ -180,7 +180,7 @@ FIREEAGLE_METHODS = {
         'http_headers': None,
         'http_method' : 'GET',
         'optional'    : [],
-        'required'    : ['token'],
+        'required'    : ['oauth_verifier', 'token'],
         'returns'     : 'oauth_token',
         'url_template': OAUTH_URL_TEMPLATE,
     },
@@ -195,7 +195,7 @@ FIREEAGLE_METHODS = {
     'request_token': {
         'http_headers': None,
         'http_method' : 'GET',
-        'optional'    : [],
+        'optional'    : ['oauth_callback'],
         'required'    : [],
         'returns'     : 'oauth_token',
         'url_template': OAUTH_URL_TEMPLATE,
@@ -441,7 +441,10 @@ class FireEagle:
         # anything.
         if 'request_url' == meta['returns']:
             return meta['url_template'].substitute( method=method, server=self.auth_server, token=token.key )
-        
+
+        if 'oauth_callback' in meta['optional'] and 'oauth_callback' not in kw:
+            kw['oauth_callback'] = "oob"
+
         # Build and sign the oauth_request
         # NOTE: If ( token == None ), it's handled silently
         #       when building/signing
