@@ -463,12 +463,12 @@ class FireEagle:
         
         if 'POST' == meta['http_method']:
             response = self.fetch_response( oauth_request.http_method, \
-                oauth_request.get_normalized_http_url(), \
+                meta['url_template'].substitute( method=method, server=""), \
                 oauth_request.to_postdata(), \
                 meta['http_headers'] )
         else:
             response = self.fetch_response( oauth_request.http_method, \
-                oauth_request.to_url() )
+                meta['url_template'].substitute( method=method, server="") + "?" + oauth_request.to_postdata() )
         
         # Method returns nothing, but finished fine
         if not meta['returns']:
