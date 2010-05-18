@@ -325,9 +325,10 @@ class FireEagle:
         return url
     
     def fetch_response( self, http_method, url, \
-            body = None, headers = None ):
+            body = None, headers = {}):
         """Pass a request to the server and return the response as a string"""
-        
+        # Explicity add a host header to prevent Python pre2.6 from adding the port
+        headers['host'] = API_SERVER
         # Prepare the request
         if ( body is not None ) or ( headers is not None ):
             self.http_connection.request( http_method, url, body, headers )
